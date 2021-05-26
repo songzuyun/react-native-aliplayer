@@ -1,8 +1,17 @@
-import React, { useRef, useState, useEffect, useMemo } from 'react';
-import { Text, Animated, Easing, SafeAreaView, StyleSheet, Image } from 'react-native';
+import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  View,
+  Text,
+  Animated,
+  Easing,
+  SafeAreaView,
+  StyleSheet,
+  Image,
+  PanResponder,
+} from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from './Slide';
-
+import { useDimensions } from '@react-native-community/hooks';
 import { formatTime, getBitrateLabel } from '../lib/utils';
 import useTimeout from '../lib/useTimeout';
 import PressView from './PressView';
@@ -63,6 +72,17 @@ const styles = StyleSheet.create({
     flex: 0.8,
     marginHorizontal: 5,
   },
+  panResponder: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  seekText: {
+    color: 'white',
+    fontSize: 18,
+  },
 });
 
 function ControlerView({
@@ -100,9 +120,13 @@ function ControlerView({
   onSlide,
   onCastClick,
 }) {
+  const { screen, window } = useDimensions();
   const [visible, setVisible] = useState(false);
   const [configVisible, setConfigVisible] = useState(false);
   const [qualityVisible, setQualityVisible] = useState(false);
+  const [currentPositon, setCurrentPositon] = useState(current);
+  const [showSeek, setShowSeek] = useState(false);
+  const currentPositonFormat = formatTime(currentPositon);
   const currentFormat = formatTime(current);
   const totalFormat = formatTime(total);
   const hasBitrate = Array.isArray(bitrateList) && bitrateList.length;
@@ -113,6 +137,56 @@ function ControlerView({
     setLoop,
     setMute,
   });
+
+  const gestureMoveRef = useRef(false);
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onStartShouldSetPanResponder: () => true,
+        onMoveShouldSetPanResponder: () => true,
+        onPanResponderStart: (e, gestureState) => {},
+        onPanResponderMove: (e, gestureState) => {
+          const { dx, dy } = gestureState;
+          if (!gestureMoveRef.current && Math.abs(dx) > 5) {
+            gestureMoveRef.current = true;
+          }
+          if (gestureMoveRef.current) {
+            const dt = 60 * (dx / window.width);
+            setCurrentPositon((pre) => {
+              let next = pre + dt;
+              if (next < 0) {
+                next = 0;
+              }
+              if (next > total) {
+                next = total;
+              }
+              return next;
+            });
+            setShowSeek(true);
+          }
+        },
+        onPanResponderRelease: (e, gestureState) => {
+          const { dx, dy } = gestureState;
+          if (gestureMoveRef.current) {
+            onSlide(parseInt(currentPositon));
+          }
+          gestureMoveRef.current = false;
+          setShowSeek(false);
+          if (dx === 0 && dy === 0) {
+            handlePressPlayer(visible);
+          }
+        },
+      }),
+    [visible, currentPositon, showSeek]
+  );
+
+  useEffect(() => {
+    if (!gestureMoveRef.current) {
+      setCurrentPositon(current);
+    }
+  }, [current]);
+
   const bitrateLabel = getBitrateLabel(bitrate) || '画质';
 
   const { animateValue, bottomAnimate, headerAnimate, opacityAnimate } = useMemo(() => {
@@ -150,7 +224,7 @@ function ControlerView({
     }).start();
   }, [visible, animateValue]);
 
-  const handlePressPlayer = () => {
+  const handlePressPlayer = (visible) => {
     if (visible) {
       setVisible(false);
       clear();
@@ -195,7 +269,28 @@ function ControlerView({
           />
         )}
       </AnimateView>
-      <PressView style={styles.stateview} onPress={handlePressPlayer} activeOpacity={1}>
+
+      {/* <PressView style={styles.stateview} onPress={()=>handlePressPlayer(visible)} activeOpacity={1}>
+        <StateView
+            isError={isError}
+            isLoading={isLoading}
+            errorObj={errorObj}
+            isPlaying={isPlaying}
+            loadingObj={loadingObj}
+            themeColor={themeColor}
+            onPressPlay={onPressPlay}
+            onPressReload={onPressReload}
+          />
+      </PressView> */}
+
+      <View style={styles.stateview} activeOpacity={1}>
+        <View style={styles.panResponder} {...panResponder.panHandlers}>
+          {showSeek && (
+            <Text
+              style={styles.seekText}
+            >{`${currentPositonFormat.M}:${currentPositonFormat.S}`}</Text>
+          )}
+        </View>
         <StateView
           isError={isError}
           isLoading={isLoading}
@@ -206,7 +301,8 @@ function ControlerView({
           onPressPlay={onPressPlay}
           onPressReload={onPressReload}
         />
-      </PressView>
+      </View>
+
       <AnimateView
         style={[
           styles.bottom,
@@ -218,9 +314,9 @@ function ControlerView({
           onPress={isPlaying ? onPressPause : onPressPlay}
           name={isPlaying ? 'pausecircleo' : 'playcircleo'}
         />
-        <Text style={styles.textTime}>{`${currentFormat.M}:${currentFormat.S}`}</Text>
+        <Text style={styles.textTime}>{`${currentPositonFormat.M}:${currentPositonFormat.S}`}</Text>
         <Slider
-          progress={current}
+          progress={currentPositon}
           min={0}
           max={total}
           cache={buffer}
@@ -238,7 +334,7 @@ function ControlerView({
           />
         )}
       </AnimateView>
-      <Progress disable={visible} value={current} maxValue={total} themeColor={themeColor} />
+      <Progress disable={visible} value={currentPositon} maxValue={total} themeColor={themeColor} />
       <ConfigView
         config={configObj}
         visible={configVisible}

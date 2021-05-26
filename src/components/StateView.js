@@ -69,7 +69,8 @@ function StateView({
           style={styles.textError}
           numberOfLines={1}
           ellipsizeMode="tail"
-        >{`播放出错:${message}`}</Text>
+          // >{`播放出错:${message}`}</Text>
+        >{`播放异常~`}</Text>
         <Button
           title="重试"
           titleStyle={{ fontSize: 12 }}

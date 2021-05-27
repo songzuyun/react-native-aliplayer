@@ -9,7 +9,7 @@ const styles = StyleSheet.create({
     maxWidth: '50%',
   },
   stateViewError: {
-    width: 200,
+    // width: 200,
     alignItems: 'center',
   },
   textError: {

@@ -195,7 +195,7 @@ const Player = forwardRef(
             }
             setCurrent(0);
             setBuffer(0);
-            onPrepare({ duration: nativeEvent.position });
+            onPrepare({ duration: nativeEvent.duration });
           }}
           onAliLoadingBegin={() => {
             setLoading(true);

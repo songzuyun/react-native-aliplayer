@@ -261,13 +261,13 @@ function ControlerView({
             onPress={() => onCastClick({ current, playSource })}
           />
         )}
-        {/* {isFull && (
+        {isFull && (
           <ControlIcon
             iconStyle={styles.iconLeft}
             name="setting"
             onPress={() => setConfigVisible(true)}
           />
-        )} */}
+        )}
       </AnimateView>
 
       {/* <PressView style={styles.stateview} onPress={()=>handlePressPlayer(visible)} activeOpacity={1}>

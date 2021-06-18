@@ -178,7 +178,7 @@ function ControlerView({
           }
         },
       }),
-    [visible, currentPositon, showSeek]
+    [visible, currentPositon, showSeek, total]
   );
 
   useEffect(() => {

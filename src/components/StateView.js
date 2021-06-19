@@ -47,7 +47,7 @@ function StateView({
   if (isLoading) {
     view = (
       <View style={styles.stateViewLoading}>
-        <ActivityIndicator size="large" color={themeColor} />
+        <ActivityIndicator size="large" color={'white'} />
         <Text style={styles.textLoading}>
           <Text>缓冲中...</Text>
           {!!percent && <Text>{`${percent}%`}</Text>}

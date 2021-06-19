@@ -1,14 +1,5 @@
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  Animated,
-  Easing,
-  SafeAreaView,
-  StyleSheet,
-  Image,
-  PanResponder,
-} from 'react-native';
+import { View, Text, Animated, Easing, SafeAreaView, StyleSheet, Image } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from './Slide';
 import { useDimensions } from '@react-native-community/hooks';
@@ -20,6 +11,7 @@ import StateView from './StateView';
 import Progress from './Progress';
 import ConfigView from './ConfigView';
 import QualityView from './QualityView';
+import GestureView from './GestureView';
 
 const GradientWhite = 'rgba(0,0,0,0)';
 const GradientBlack = 'rgba(0,0,0,0.3)';
@@ -34,6 +26,7 @@ const styles = StyleSheet.create({
   },
   stateview: {
     flex: 1,
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -138,49 +131,55 @@ function ControlerView({
     setMute,
   });
 
-  const gestureMoveRef = useRef(false);
+  // 在手势回调里不能直接使用属性和state
+  const totalRef = useRef(total);
+  useEffect(() => {
+    totalRef.current = total;
+  }, [total]);
 
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderStart: (e, gestureState) => {},
-        onPanResponderMove: (e, gestureState) => {
-          const { dx, dy } = gestureState;
-          if (!gestureMoveRef.current && Math.abs(dx) > 5) {
-            gestureMoveRef.current = true;
-          }
-          if (gestureMoveRef.current) {
-            const dt = 60 * (dx / window.width);
-            setCurrentPositon((pre) => {
-              let next = pre + dt;
-              if (next < 0) {
-                next = 0;
-              }
-              if (next > total) {
-                next = total;
-              }
-              return next;
-            });
-            setShowSeek(true);
-          }
-        },
-        onPanResponderRelease: (e, gestureState) => {
-          const { dx, dy } = gestureState;
-          if (gestureMoveRef.current) {
-            onSlide(parseInt(currentPositon));
-          }
-          gestureMoveRef.current = false;
-          setShowSeek(false);
-          if (dx === 0 && dy === 0) {
-            handlePressPlayer(visible);
-          }
-        },
-      }),
-    [visible, currentPositon, showSeek, total]
-  );
+  const gestureMoveRef = useRef(false); // 拖动标记
+  const currentDxRef = useRef(0); //拖动时onPanResponderMove每次回调的dx（是一个累加的值）
+  const currentPositonRef = useRef(0); //拖动时当前播放位置，用于释放时seek（onSlide）
 
+  const onPanResponderMove = (e, gestureState) => {
+    const { dx, dy } = gestureState;
+    if (!gestureMoveRef.current && Math.abs(dx) > 5) {
+      gestureMoveRef.current = true;
+    }
+    if (gestureMoveRef.current) {
+      const newDx = dx - currentDxRef.current; // 每次回调dx差值
+      const dt = 60 * (newDx / window.width);
+      setCurrentPositon((pre) => {
+        let next = pre + dt;
+        if (next < 0) {
+          next = 0;
+        }
+        if (next > totalRef.current) {
+          next = totalRef.current;
+        }
+        currentPositonRef.current = next;
+        return next;
+      });
+      setShowSeek(true);
+    }
+    currentDxRef.current = dx;
+  };
+
+  const onPanResponderRelease = (e, gestureState) => {
+    const { dx, dy } = gestureState;
+    if (gestureMoveRef.current) {
+      onSlide(parseInt(currentPositonRef.current));
+    }
+    if (dx === 0 && dy === 0) {
+      handlePressPlayer();
+    }
+    gestureMoveRef.current = false;
+    currentDxRef.current = 0;
+    currentPositonRef.current = 0;
+    setShowSeek(false);
+  };
+
+  // 不拖动时要更新当前播放位置
   useEffect(() => {
     if (!gestureMoveRef.current) {
       setCurrentPositon(current);
@@ -224,14 +223,16 @@ function ControlerView({
     }).start();
   }, [visible, animateValue]);
 
-  const handlePressPlayer = (visible) => {
-    if (visible) {
-      setVisible(false);
-      clear();
-    } else {
-      setVisible(true);
-      set();
-    }
+  const handlePressPlayer = () => {
+    setVisible((pre) => {
+      if (pre) {
+        clear();
+        return false;
+      } else {
+        set();
+        return true;
+      }
+    });
   };
 
   return (
@@ -270,27 +271,18 @@ function ControlerView({
         )}
       </AnimateView>
 
-      {/* <PressView style={styles.stateview} onPress={()=>handlePressPlayer(visible)} activeOpacity={1}>
-        <StateView
-            isError={isError}
-            isLoading={isLoading}
-            errorObj={errorObj}
-            isPlaying={isPlaying}
-            loadingObj={loadingObj}
-            themeColor={themeColor}
-            onPressPlay={onPressPlay}
-            onPressReload={onPressReload}
-          />
-      </PressView> */}
-
       <View style={styles.stateview} activeOpacity={1}>
-        <View style={styles.panResponder} {...panResponder.panHandlers}>
+        <GestureView
+          onPanResponderMove={onPanResponderMove}
+          onPanResponderRelease={onPanResponderRelease}
+        >
           {showSeek && (
             <Text
               style={styles.seekText}
             >{`${currentPositonFormat.M}:${currentPositonFormat.S}`}</Text>
           )}
-        </View>
+        </GestureView>
+
         <StateView
           isError={isError}
           isLoading={isLoading}

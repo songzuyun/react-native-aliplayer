@@ -294,7 +294,7 @@ Player.defaultProps = {
   onChangeBitrate: () => {},
   onProgress: () => {},
   onPrepare: () => {},
-  themeColor: '#F85959',
+  themeColor: '#fff',
   enableHardwareDecoder: false,
   setSpeed: 1.0,
   setScaleMode: 0,

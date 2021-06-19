@@ -70,7 +70,7 @@ function StateView({
           numberOfLines={1}
           ellipsizeMode="tail"
           // >{`播放出错:${message}`}</Text>
-        >{`播放异常~`}</Text>
+        >{`播放出错啦~`}</Text>
         <Button
           title="重试"
           titleStyle={{ fontSize: 12 }}

@@ -98,6 +98,7 @@ function ControlerView({
   setScaleMode,
   setLoop,
   setMute,
+  setVolume,
   // ******
   isError,
   isLoading,
@@ -129,26 +130,62 @@ function ControlerView({
     setScaleMode,
     setLoop,
     setMute,
+    setVolume,
   });
 
   // 在手势回调里不能直接使用属性和state
   const totalRef = useRef(total);
+  const isFullRef = useRef(isFull);
+  const configObjRef = useRef({
+    setSpeed,
+    setScaleMode,
+    setLoop,
+    setMute,
+    setVolume,
+  });
   useEffect(() => {
     totalRef.current = total;
-  }, [total]);
+    isFullRef.current = isFull;
+    configObjRef.current = {
+      setSpeed,
+      setScaleMode,
+      setLoop,
+      setMute,
+      setVolume,
+    };
+  }, [total, isFull, setSpeed, setScaleMode, setLoop, setMute, setVolume]);
 
   const gestureMoveRef = useRef(false); // 拖动标记
   const currentDxRef = useRef(0); //拖动时onPanResponderMove每次回调的dx（是一个累加的值）
   const currentPositonRef = useRef(0); //拖动时当前播放位置，用于释放时seek（onSlide）
 
   const onPanResponderMove = (e, gestureState) => {
-    const { dx, dy } = gestureState;
+    const { dx, dy, x0, y0 } = gestureState;
+    const width = window.width;
+    // const width = isFullRef.current
+    //   ? Math.max(window.width, window.height)
+    //   : Math.min(window.width, window.height);
+    // const height = isFullRef.current
+    //   ? Math.min(window.width, window.height)
+    //   : Math.max(window.width, window.height);
+    // const widthE = width / 4;
+    // if (Math.abs(dy) > 5 && x0 < widthE) {
+    //   // 亮度
+    // }
+    // if (Math.abs(dy) > 5 && x0 > widthE * 3) {
+    //   // 声音
+    //   const setVolume = 1;
+    //   const newConfig = Object.assign({}, configObjRef.current, { setVolume });
+    //   setConfigObj(newConfig);
+    //   onChangeConfig(newConfig);
+    // }
+    // if (!gestureMoveRef.current && Math.abs(dx) > 5 && x0 >= widthE && x0 <= widthE * 3) {
     if (!gestureMoveRef.current && Math.abs(dx) > 5) {
       gestureMoveRef.current = true;
     }
     if (gestureMoveRef.current) {
       const newDx = dx - currentDxRef.current; // 每次回调dx差值
-      const dt = 60 * (newDx / window.width);
+      const dt = 90 * (newDx / width);
       setCurrentPositon((pre) => {
         let next = pre + dt;
         if (next < 0) {
